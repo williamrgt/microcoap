@@ -33,20 +33,20 @@ int main(int argc, char **argv)
     size_t sndlen = sizeof(buf);
     coap_packet_t sndpkt;
     coap_make_req_observe(&scratch_buf, &sndpkt);
+
     if (0 != (rc = coap_build(buf, &sndlen, &sndpkt)))
             printf("coap_build failed rc=%d\n", rc);
     else
     {
 #ifdef DEBUG
         printf("Sending: ");
-        coap_dump(buf, sndlen, true);
+        coap_dump (buf, sndlen, true);
         printf("\n");
 #endif
 #ifdef DEBUG
         coap_dumpPacket(&sndpkt);
 #endif
-        if (sendto(fd, buf, sndlen, 0, (struct sockaddr *)&servaddr, sizeof(servaddr)))
-            printf("err sendto()");
+        sendto(fd, buf, sndlen, 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
     }
 
     while(1)

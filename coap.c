@@ -268,6 +268,20 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt)
     size_t i;
     uint8_t *p;
     uint16_t running_delta = 0;
+ 	/*
+	     0                   1                   2                   3
+	    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |Ver| T |  TKL  |      Code     |          Message ID           |
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |   Token (if any, TKL bytes) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |   Options (if any) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |1 1 1 1 1 1 1 1|    Payload (if any) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+  */
     // build header
     if (*buflen < 4)
         return COAP_ERR_BUFFER_TOO_SMALL;
@@ -281,6 +295,21 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt)
     buf[2] = pkt->hdr.id[0];
     buf[3] = pkt->hdr.id[1];
 
+ 	/*
+	     0   1   2   3   4   5   6   7
+	   +---+---+---+---+---+---+---+---+
+	   | Option Delta  |    Length     | for 0..14
+	   +---+---+---+---+---+---+---+---+
+	   |   Option Value ...
+	   +---+---+---+---+---+---+---+---+
+	                                               for 15..270:
+	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+	   | Option Delta  | 1   1   1   1 |          Length - 15          |
+	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+	   |   Option Value ...
+	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+
+  */
     // inject options
     p = buf + 4;
     for (i=0;i<pkt->numopts;i++)
@@ -344,23 +373,21 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
 {
     pkt->hdr.ver = 0x01;
     pkt->hdr.t = COAP_TYPE_CON;
-    pkt->hdr.tkl = 2;
+    pkt->hdr.tkl = 0;
     pkt->hdr.code = COAP_METHOD_GET;
     pkt->numopts = 2;
 
-    // safe because 1 < MAXOPT
-    pkt->opts[0].num = COAP_OPTION_IF_MATCH;
-    pkt->opts[0].buf.p = scratch->p;
-    pkt->opts[1].num = COAP_OPTIOM_OBSERVE;
-    pkt->opts[1].buf.p = NULL;
-    if (scratch->len < 2)
-        return COAP_ERR_BUFFER_TOO_SMALL;
-    scratch->p[0] = ((uint16_t)COAP_CONTENTTYPE_TEXT_PLAIN & 0xFF00) >> 8;
-    scratch->p[1] = ((uint16_t)COAP_CONTENTTYPE_TEXT_PLAIN & 0x00FF);
-    pkt->opts[0].buf.len = 2;
-    char *content = "obs";
-    pkt->payload.p = content;
-    pkt->payload.len = sizeof(content);
+    char *content = "obs?serial_number=123-456-789";
+    pkt->opts[0].num = COAP_OPTION_OBSERVE;
+    pkt->opts[0].buf.p = NULL;
+
+    pkt->opts[1].num = COAP_OPTION_URI_PATH;
+    pkt->opts[1].buf.p = content;
+    pkt->opts[1].buf.len = 3;
+    /*
+    pkt->opts[2].num = COAP_OPTION_MAX_AGE;
+    pkt->opts[2].buf.p = 1;
+    */
     return 0;
 }
 
