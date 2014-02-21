@@ -318,10 +318,10 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt)
         if (p-buf > *buflen)
             return COAP_ERR_BUFFER_TOO_SMALL;
         delta = pkt->opts[i].num - running_delta;
-        if (delta > 12)
-            return COAP_ERR_UNSUPPORTED;    // FIXME
-        if (pkt->opts[i].buf.len > 12)
-            return COAP_ERR_UNSUPPORTED;    // FIXME
+        //if (delta > 12)
+        //    return COAP_ERR_UNSUPPORTED;    // FIXME
+        //if (pkt->opts[i].buf.len > 12)
+        //   return COAP_ERR_UNSUPPORTED;    // FIXME
         *p++ = (delta << 4) | (pkt->opts[i].buf.len & 0x0F);
         if ((p+pkt->opts[i].buf.len) - buf > *buflen)
             return COAP_ERR_BUFFER_TOO_SMALL;
@@ -377,17 +377,29 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     pkt->hdr.code = COAP_METHOD_GET;
     pkt->numopts = 2;
 
-    char *content = "obs?serial_number=123-456-789";
     pkt->opts[0].num = COAP_OPTION_OBSERVE;
     pkt->opts[0].buf.p = NULL;
 
+    char *uri = "obs?serial_number=123-456-789";
     pkt->opts[1].num = COAP_OPTION_URI_PATH;
-    pkt->opts[1].buf.p = content;
-    pkt->opts[1].buf.len = 3;
+    pkt->opts[1].buf.p = uri;
+    pkt->opts[1].buf.len = 3;//strlen(uri); // got 404 with query in vs0.inf.ethz.ch
     /*
-    pkt->opts[2].num = COAP_OPTION_MAX_AGE;
-    pkt->opts[2].buf.p = 1;
+    // or
+    // with +1 numopts
+    char *query = "serial_number=123-456-789";
+    pkt->opts[2].num = COAP_OPTION_URI_QUERY;
+    pkt->opts[2].buf.p = query;
+    pkt->opts[2].buf.len = strlen(query);
     */
+    /*
+    pkt->opts[3].num = COAP_OPTION_MAX_AGE;
+    pkt->opts[3].buf.p = 1;
+    */
+    char *content = "test";
+    pkt->payload.p = content;
+    pkt->payload.len = strlen(content);
+
     return 0;
 }
 
