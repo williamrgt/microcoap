@@ -1,14 +1,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <strings.h>
 #include <netdb.h>
-
+#include <arpa/inet.h>
 
 #include "coap.h"
 
 #define PORT 5683
+#define HOST "vs0.inf.ethz.ch"
 
 int main(int argc, char **argv)
 {
@@ -23,12 +23,12 @@ int main(int argc, char **argv)
     bzero(&servaddr,sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(PORT);
-
-    if (inet_aton("129.132.15.80", &servaddr.sin_addr)==0)
-    {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }
+    // solve hostname
+    struct hostent *he;
+    struct in_addr **addr_list;
+    he = gethostbyname(HOST);
+    addr_list = (struct in_addr **) he->h_addr_list;
+    inet_aton(inet_ntoa(*addr_list[0]), &servaddr.sin_addr);
 
     size_t sndlen = sizeof(buf);
     coap_packet_t sndpkt;
@@ -71,9 +71,7 @@ int main(int argc, char **argv)
 #ifdef DEBUG
             coap_dumpPacket(&pkt);
 #endif
-            //coap_handle_req(&scratch_buf, &pkt, &rsppkt);
-            coap_make_response(&scratch_buf, &rsppkt, NULL, 0, 0, 0, 0, COAP_CONTENTTYPE_NONE);
-
+            coap_make_req_observe_ack(&scratch_buf, &rsppkt);
             if (0 != (rc = coap_build(buf, &rsplen, &rsppkt)))
                 printf("coap_build failed rc=%d\n", rc);
             else

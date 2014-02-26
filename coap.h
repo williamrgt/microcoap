@@ -154,9 +154,11 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt);
 void coap_dump(const uint8_t *buf, size_t buflen, bool bare);
 int coap_make_response(coap_rw_buffer_t *scratch, coap_packet_t *pkt, const uint8_t *content, size_t content_len, uint8_t msgid_hi, uint8_t msgid_lo, coap_responsecode_t rspcode, coap_content_type_t content_type);
 int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt);
+int coap_make_req_observe_ack(coap_rw_buffer_t *scratch, coap_packet_t *pkt);
 int coap_handle_req(coap_rw_buffer_t *scratch, const coap_packet_t *inpkt, coap_packet_t *outpkt);
 void coap_setup(void);
 void endpoint_setup(void);
+void coap_option_nibble(uint8_t value, uint8_t *nibble);
 
 #ifdef __cplusplus
 }

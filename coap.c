@@ -268,20 +268,19 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt)
     size_t i;
     uint8_t *p;
     uint16_t running_delta = 0;
- 	/*
-	     0                   1                   2                   3
-	    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |Ver| T |  TKL  |      Code     |          Message ID           |
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   Token (if any, TKL bytes) ...
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   Options (if any) ...
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |1 1 1 1 1 1 1 1|    Payload (if any) ...
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-  */
+/*
+     0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |Ver| T |  TKL  |      Code     |          Message ID           |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Token (if any, TKL bytes) ...
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Options (if any) ...
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |1 1 1 1 1 1 1 1|    Payload (if any) ...
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
     // build header
     if (*buflen < 4)
         return COAP_ERR_BUFFER_TOO_SMALL;
@@ -295,39 +294,68 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt)
     buf[2] = pkt->hdr.id[0];
     buf[3] = pkt->hdr.id[1];
 
- 	/*
-	     0   1   2   3   4   5   6   7
-	   +---+---+---+---+---+---+---+---+
-	   | Option Delta  |    Length     | for 0..14
-	   +---+---+---+---+---+---+---+---+
-	   |   Option Value ...
-	   +---+---+---+---+---+---+---+---+
-	                                               for 15..270:
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	   | Option Delta  | 1   1   1   1 |          Length - 15          |
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	   |   Option Value ...
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-
-  */
+//http://tools.ietf.org/html/draft-ietf-core-coap-18#section-3.1
+/*
+     0   1   2   3   4   5   6   7
+   +---------------+---------------+
+   |               |               |
+   |  Option Delta | Option Length |   1 byte
+   |               |               |
+   +---------------+---------------+
+   \                               \
+   /         Option Delta          /   0-2 bytes
+   \          (extended)           \
+   +-------------------------------+
+   \                               \
+   /         Option Length         /   0-2 bytes
+   \          (extended)           \
+   +-------------------------------+
+   \                               \
+   /                               /
+   \                               \
+   /         Option Value          /   0 or more bytes
+   \                               \
+   /                               /
+   \                               \
+   +-------------------------------+
+*/
     // inject options
     p = buf + 4;
     for (i=0;i<pkt->numopts;i++)
     {
-        uint8_t delta;
+        uint8_t optDelta, len, delta = 0;
+
         if (p-buf > *buflen)
-            return COAP_ERR_BUFFER_TOO_SMALL;
-        delta = pkt->opts[i].num - running_delta;
-        //if (delta > 12)
-        //    return COAP_ERR_UNSUPPORTED;    // FIXME
-        //if (pkt->opts[i].buf.len > 12)
-        //   return COAP_ERR_UNSUPPORTED;    // FIXME
-        *p++ = (delta << 4) | (pkt->opts[i].buf.len & 0x0F);
-        if ((p+pkt->opts[i].buf.len) - buf > *buflen)
-            return COAP_ERR_BUFFER_TOO_SMALL;
+             return COAP_ERR_BUFFER_TOO_SMALL;
+        optDelta = pkt->opts[i].num - running_delta;
+        coap_option_nibble(optDelta, &delta);
+        coap_option_nibble(pkt->opts[i].buf.len, &len);
+
+        *p++ = (0xFF & (delta << 4 | len));
+        if (delta == 13)
+        {
+            *p++ = (optDelta - 13);
+        }
+        else
+        if (delta == 14)
+        {
+            *p++ = ((optDelta-269) >> 8);
+            *p++ = (0xFF & (optDelta-269));
+        }
+        if (len == 13)
+        {
+            *p++ = (pkt->opts[i].buf.len - 13);
+        }
+        else
+        if (len == 14)
+  	    {
+            *p++ = (pkt->opts[i].buf.len >> 8);
+            *p++ = (0xFF & (pkt->opts[i].buf.len-269));
+        }
+
         memcpy(p, pkt->opts[i].buf.p, pkt->opts[i].buf.len);
         p += pkt->opts[i].buf.len;
-        running_delta = delta;
+        running_delta = pkt->opts[i].num;
     }
 
     opts_len = (p - buf) - 4;   // number of bytes used by options
@@ -344,6 +372,23 @@ int coap_build(uint8_t *buf, size_t *buflen, const coap_packet_t *pkt)
         *buflen = opts_len + 4;
     return 0;
 }
+
+void coap_option_nibble(uint8_t value, uint8_t *nibble)
+{
+    if (value<13)
+    {
+        *nibble = (0xFF & value);
+    }
+    else 
+    if (value<=0xFF+13)
+    {
+        *nibble = 13;
+    } else if (value<=0xFFFF+269)
+    {
+        *nibble = 14;
+    }
+}
+
 
 int coap_make_response(coap_rw_buffer_t *scratch, coap_packet_t *pkt, const uint8_t *content, size_t content_len, uint8_t msgid_hi, uint8_t msgid_lo, coap_responsecode_t rspcode, coap_content_type_t content_type)
 {
@@ -375,30 +420,41 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     pkt->hdr.t = COAP_TYPE_CON;
     pkt->hdr.tkl = 0;
     pkt->hdr.code = COAP_METHOD_GET;
-    pkt->numopts = 2;
+    pkt->numopts = 3;
 
     pkt->opts[0].num = COAP_OPTION_OBSERVE;
     pkt->opts[0].buf.p = NULL;
 
-    char *uri = "obs?serial_number=123-456-789";
+    // http://tools.ietf.org/html/draft-ietf-core-coap-18#section-6.5
+    char *uri = "obs";
     pkt->opts[1].num = COAP_OPTION_URI_PATH;
-    pkt->opts[1].buf.p = uri;
-    pkt->opts[1].buf.len = 3;//strlen(uri); // got 404 with query in vs0.inf.ethz.ch
-    /*
-    // or
-    // with +1 numopts
-    char *query = "serial_number=123-456-789";
+    pkt->opts[1].buf.p = (const uint8_t *)uri;
+    pkt->opts[1].buf.len = strlen(uri);
+
+    char *query1 = "serial_number=123-456-789";
     pkt->opts[2].num = COAP_OPTION_URI_QUERY;
-    pkt->opts[2].buf.p = query;
-    pkt->opts[2].buf.len = strlen(query);
-    */
+    pkt->opts[2].buf.p = (const uint8_t *)query1;
+    pkt->opts[2].buf.len = strlen(query1);
     /*
-    pkt->opts[3].num = COAP_OPTION_MAX_AGE;
-    pkt->opts[3].buf.p = 1;
+    char *query2 = "test=true";
+    pkt->opts[3].num = COAP_OPTION_URI_QUERY;
+    pkt->opts[3].buf.p = (const uint8_t *)query2;
+    pkt->opts[3].buf.len = strlen(query2);
     */
     char *content = "test";
-    pkt->payload.p = content;
+    pkt->payload.p = (const uint8_t *)content;
     pkt->payload.len = strlen(content);
+
+    return 0;
+}
+
+int coap_make_req_observe_ack(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
+{
+    pkt->hdr.ver = 0x01;
+    pkt->hdr.t = COAP_TYPE_ACK;
+    pkt->hdr.tkl = 0;
+    pkt->hdr.code = 0;
+    pkt->numopts = 0;
 
     return 0;
 }
@@ -442,4 +498,3 @@ next:
 void coap_setup(void)
 {
 }
-
