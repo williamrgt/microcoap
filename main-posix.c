@@ -8,7 +8,7 @@
 #include "coap.h"
 
 #define PORT 5683
-#define HOST "vs0.inf.ethz.ch"
+#define HOST "54.207.46.52"
 
 int main(int argc, char **argv)
 {
@@ -71,8 +71,11 @@ int main(int argc, char **argv)
 #ifdef DEBUG
             coap_dumpPacket(&pkt);
 #endif
-            coap_make_req_observe_ack(&scratch_buf, &rsppkt);
-            if (0 != (rc = coap_build(buf, &rsplen, &rsppkt)))
+			//ack for package received
+			//rsppkt->hdr.code = pkt->hdr.code;
+            coap_make_req_observe_ack(&scratch_buf, &rsppkt, pkt.hdr.id[0], pkt.hdr.id[1]);
+            
+			if (0 != (rc = coap_build(buf, &rsplen, &rsppkt)))
                 printf("coap_build failed rc=%d\n", rc);
             else
             {

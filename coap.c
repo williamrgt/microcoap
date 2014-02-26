@@ -426,7 +426,7 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     pkt->opts[0].buf.p = NULL;
 
     // http://tools.ietf.org/html/draft-ietf-core-coap-18#section-6.5
-    char *uri = "obs";
+    char *uri = "time";
     pkt->opts[1].num = COAP_OPTION_URI_PATH;
     pkt->opts[1].buf.p = (const uint8_t *)uri;
     pkt->opts[1].buf.len = strlen(uri);
@@ -448,13 +448,15 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     return 0;
 }
 
-int coap_make_req_observe_ack(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
+int coap_make_req_observe_ack(coap_rw_buffer_t *scratch, coap_packet_t *pkt, uint8_t msgid_hi, uint8_t msgid_lo)
 {
     pkt->hdr.ver = 0x01;
     pkt->hdr.t = COAP_TYPE_ACK;
     pkt->hdr.tkl = 0;
     pkt->hdr.code = 0;
-    pkt->numopts = 0;
+    pkt->hdr.id[0] = msgid_hi;
+    pkt->hdr.id[1] = msgid_lo;
+	pkt->numopts = 0;
 
     return 0;
 }
