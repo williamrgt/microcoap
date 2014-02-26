@@ -420,7 +420,7 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     pkt->hdr.t = COAP_TYPE_CON;
     pkt->hdr.tkl = 0;
     pkt->hdr.code = COAP_METHOD_GET;
-    pkt->numopts = 3;
+    pkt->numopts = 2;
 
     pkt->opts[0].num = COAP_OPTION_OBSERVE;
     pkt->opts[0].buf.p = NULL;
@@ -430,18 +430,18 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     pkt->opts[1].num = COAP_OPTION_URI_PATH;
     pkt->opts[1].buf.p = (const uint8_t *)uri;
     pkt->opts[1].buf.len = strlen(uri);
-
+	/*
     char *query1 = "serial_number=123-456-789";
     pkt->opts[2].num = COAP_OPTION_URI_QUERY;
     pkt->opts[2].buf.p = (const uint8_t *)query1;
     pkt->opts[2].buf.len = strlen(query1);
-    /*
+    
     char *query2 = "test=true";
     pkt->opts[3].num = COAP_OPTION_URI_QUERY;
     pkt->opts[3].buf.p = (const uint8_t *)query2;
     pkt->opts[3].buf.len = strlen(query2);
     */
-    char *content = "test";
+    char *content = "serial_number=123-456-789";
     pkt->payload.p = (const uint8_t *)content;
     pkt->payload.len = strlen(content);
 
