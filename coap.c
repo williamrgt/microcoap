@@ -424,6 +424,7 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
 
     pkt->opts[0].num = COAP_OPTION_OBSERVE;
     pkt->opts[0].buf.p = NULL;
+	pkt->opts[0].buf.len = 0;
 
     // http://tools.ietf.org/html/draft-ietf-core-coap-18#section-6.5
     char *uri = "time";
