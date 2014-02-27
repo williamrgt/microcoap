@@ -414,7 +414,7 @@ int coap_make_response(coap_rw_buffer_t *scratch, coap_packet_t *pkt, const uint
     return 0;
 }
 
-int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
+int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt, char *uri, char *content)
 {
     pkt->hdr.ver = 0x01;
     pkt->hdr.t = COAP_TYPE_CON;
@@ -427,10 +427,10 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
 	pkt->opts[0].buf.len = 0;
 
     // http://tools.ietf.org/html/draft-ietf-core-coap-18#section-6.5
-    char *uri = "time";
     pkt->opts[1].num = COAP_OPTION_URI_PATH;
-    pkt->opts[1].buf.p = (const uint8_t *)uri;
+    pkt->opts[1].buf.p = (uint8_t *)uri;
     pkt->opts[1].buf.len = strlen(uri);
+	
 	/*
     char *query1 = "serial_number=123-456-789";
     pkt->opts[2].num = COAP_OPTION_URI_QUERY;
@@ -442,8 +442,8 @@ int coap_make_req_observe(coap_rw_buffer_t *scratch, coap_packet_t *pkt)
     pkt->opts[3].buf.p = (const uint8_t *)query2;
     pkt->opts[3].buf.len = strlen(query2);
     */
-    char *content = "serial_number=123-456-789";
-    pkt->payload.p = (const uint8_t *)content;
+	
+    pkt->payload.p = (uint8_t *)content;
     pkt->payload.len = strlen(content);
 
     return 0;

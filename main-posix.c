@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 
     size_t sndlen = sizeof(buf);
     coap_packet_t sndpkt;
-    coap_make_req_observe(&scratch_buf, &sndpkt);
+    coap_make_req_observe(&scratch_buf, &sndpkt, "time", "serial_number=123-456-789");
 
     if (0 != (rc = coap_build(buf, &sndlen, &sndpkt)))
             printf("coap_build failed rc=%d\n", rc);
