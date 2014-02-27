@@ -8,6 +8,7 @@
 
 #define PORT 5683
 #define HOST "54.207.46.52"
+#define HOST2 "54.207.54.149"
 
 int main(int argc, char **argv)
 {
