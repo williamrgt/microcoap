@@ -4,7 +4,6 @@
 #include <strings.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <stdbool.h>
 #include "coap.h"
 
 #define PORT 5683
