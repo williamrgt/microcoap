@@ -1,4 +1,5 @@
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <strings.h>
@@ -14,6 +15,7 @@ int main(int argc, char **argv)
 {
     int fd, rc;
     struct sockaddr_in servaddr, cliaddr;
+    struct timeval timeout;
 
     uint8_t buf[4096];
     uint8_t scratch_raw[4096];
@@ -54,8 +56,17 @@ int main(int argc, char **argv)
         int n, rc;
         socklen_t len = sizeof(cliaddr);
         coap_packet_t pkt;
+        timeout.tv_sec = 1; //waits 1 second
+        timeout.tv_usec = 0;
 
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,&timeout,sizeof(timeout));
         n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr *)&cliaddr, &len);
+        if(n <= 0)
+        {
+            //nothing received
+            printf("nothing received %d\n",n);
+            break;
+        }
 #ifdef DEBUG
         printf("Received: ");
         coap_dump(buf, n, true);
@@ -71,11 +82,11 @@ int main(int argc, char **argv)
 #ifdef DEBUG
             coap_dumpPacket(&pkt);
 #endif
-			//ack for package received
-			//rsppkt->hdr.code = pkt->hdr.code;
+            //ack for package received
+            //rsppkt->hdr.code = pkt->hdr.code;
             coap_make_req_observe_ack(&scratch_buf, &rsppkt, pkt.hdr.id[0], pkt.hdr.id[1]);
-            
-			if (0 != (rc = coap_build(buf, &rsplen, &rsppkt)))
+
+            if (0 != (rc = coap_build(buf, &rsplen, &rsppkt)))
                 printf("coap_build failed rc=%d\n", rc);
             else
             {
@@ -92,4 +103,5 @@ int main(int argc, char **argv)
             }
         }
     }
+    return 0;
 }
